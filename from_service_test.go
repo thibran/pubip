@@ -2,36 +2,16 @@ package pubip
 
 import "testing"
 
-func TestFromIdentMe(t *testing.T) {
-	check(t, FromIdentMe)
+func TestAllFuncs2_v4(t *testing.T) {
+	for _, f := range AllFuncs(IPv4) {
+		check(t, f)
+	}
 }
 
-func TestFromIPecho(t *testing.T) {
-	check(t, FromIPecho)
-}
-
-func TestFromIfconfig(t *testing.T) {
-	check(t, FromIfconfig)
-}
-
-func TestFromIPinfo(t *testing.T) {
-	check(t, FromIPinfo)
-}
-
-func TestFromIcanhazip(t *testing.T) {
-	check(t, FromIcanhazip)
-}
-
-func TestFromWhatismyipaddress(t *testing.T) {
-	check(t, FromWhatismyipaddress)
-}
-
-func TestFromMyexternalIP(t *testing.T) {
-	check(t, FromMyexternalIP)
-}
-
-func TestFromAmazon(t *testing.T) {
-	check(t, FromAmazon)
+func TestAllFuncs2_v6(t *testing.T) {
+	for _, f := range AllFuncs(IPv6) {
+		check(t, f)
+	}
 }
 
 func check(t *testing.T, fn IPFn) {

@@ -3,67 +3,101 @@ package pubip
 import (
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 )
 
-var (
-	timeoutNormal = time.Duration(600 * time.Millisecond)
-	timeoutLong   = time.Duration(800 * time.Millisecond)
+var services = []service{
+	{v6: "http://ident.me"},
+	{v4: "http://ipecho.net/plain"},
+	{
+		v6: "https://v6.ifconfig.co",
+		v4: "https://v4.ifconfig.co",
+	},
+	{v4: "https://ipinfo.io/ip"},
+	{
+		v6: "https://ipv6.icanhazip.com",
+		v4: "https://ipv4.icanhazip.com",
+	},
+	{v6: "http://bot.whatismyipaddress.com"},
+	{
+		v6: "https://myexternalip.com/raw",
+		v4: "https://ipv4.myexternalip.com/raw",
+	},
+	{v4: "http://checkip.amazonaws.com"},
+	{
+		v6: "https://6.ifcfg.me",
+		v4: "https://4.ifcfg.me",
+	},
+	{v6: "https://ip.tyk.nu"},
+	{v6: "https://tnx.nl/ip"},
+	{
+		v6: "https://l2.io/ip",
+		v4: "https://www.l2.io/ip",
+	},
+	{v6: "https://ip.appspot.com"},
+	{v4: "https://ipof.in/txt"},
+	{v6: "https://wgetip.com"},
+	{v4: "http://eth0.me"},
+	{v6: "https://tnx.nl/ip"},
+}
+
+const (
+	contentType   = "Content-Type"
+	typeTextPlain = "text/plain"
 )
 
-// FromIdentMe - http://ident.me
-func FromIdentMe() (string, error) {
-	return get("http://ident.me", timeoutNormal)
+type service struct {
+	v6 url
+	v4 url
 }
 
-// FromIPecho - http://ipecho.net/plain
-func FromIPecho() (string, error) {
-	return get("http://ipecho.net/plain", timeoutNormal)
+func (ser service) ipv6func() IPFn {
+	return func() (string, error) {
+		return get(ser.v6)
+	}
 }
 
-// FromIfconfig - https://ifconfig.co
-func FromIfconfig() (string, error) {
-	ip, err := get("https://ifconfig.co", timeoutLong)
-	return strings.TrimSpace(ip), err
+func (ser service) ipv4func() IPFn {
+	return func() (string, error) {
+		return get(ser.v4)
+	}
 }
 
-// FromIPinfo - https://ipinfo.io/ip
-func FromIPinfo() (string, error) {
-	ip, err := get("https://ipinfo.io/ip", timeoutLong)
-	return strings.TrimSpace(ip), err
-}
-
-// FromIcanhazip - https://icanhazip.com
-func FromIcanhazip() (string, error) {
-	ip, err := get("https://icanhazip.com", timeoutLong)
-	return strings.TrimSpace(ip), err
-}
-
-// FromWhatismyipaddress - http://bot.whatismyipaddress.com
-func FromWhatismyipaddress() (string, error) {
-	return get("http://bot.whatismyipaddress.com", timeoutLong)
-}
-
-// FromMyexternalIP - https://myexternalip.com/raw
-func FromMyexternalIP() (string, error) {
-	ip, err := get("https://myexternalip.com/raw", timeoutLong)
-	return strings.TrimSpace(ip), err
-}
-
-// FromAmazon - http://checkip.amazonaws.com
-func FromAmazon() (string, error) {
-	ip, err := get("http://checkip.amazonaws.com", timeoutNormal)
-	return strings.TrimSpace(ip), err
+// AllFuncs of IPFn with IPType t in random order.
+// Don't forget to call before using this function once rand.Seed().
+func AllFuncs(t IPType) IPFuncs {
+	var a IPFuncs
+	for _, ser := range services {
+		switch {
+		case (t == IPv6orIPv4 || t == IPv6) && len(ser.v6) > 0:
+			a = append(a, ser.ipv6func())
+			continue
+		case (t == IPv6orIPv4 || t == IPv4) && len(ser.v4) > 0:
+			a = append(a, ser.ipv4func())
+			continue
+		}
+	}
+	r := make(IPFuncs, len(a))
+	for k, v := range rand.Perm(len(a)) {
+		r[k] = a[v]
+	}
+	return r
 }
 
 // get returns the body of the response with a request timeout of 1 second.
-func get(url string, d time.Duration) (string, error) {
-	client := http.Client{
-		Timeout: time.Duration(d),
+func get(u url) (string, error) {
+	req, err := http.NewRequest("GET", string(u), nil)
+	if err != nil {
+		return "", err
 	}
-	r, err := client.Get(url)
+	req.Header.Set(contentType, typeTextPlain)
+	client := http.Client{
+		Timeout: time.Duration(2 * time.Second),
+	}
+	r, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -73,5 +107,5 @@ func get(url string, d time.Duration) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(body), nil
+	return strings.TrimSpace(string(body)), nil
 }

@@ -26,13 +26,3 @@ func TestAddress_sequential(t *testing.T) {
 		t.Error(err)
 	}
 }
-
-func TestRunIPFn(t *testing.T) {
-	ip, ok := runIPFn(DigUsingOpendns)
-	if !ok {
-		t.Error("not ok")
-	}
-	if len(ip) == 0 {
-		t.Fail()
-	}
-}
