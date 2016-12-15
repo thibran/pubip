@@ -1,26 +1,29 @@
 package pubip
 
 import "testing"
+import "strings"
 
-func TestAllFuncs2_v4(t *testing.T) {
+func TestAllFuncs_v4(t *testing.T) {
 	for _, f := range AllFuncs(IPv4) {
-		check(t, f)
+		if _, err := f(); err != nil && err != errNotV4Address {
+			if e := err.Error(); strings.HasPrefix(e, "status code") ||
+				strings.Contains(e, "Client.Timeout exceeded") {
+				continue
+			}
+			t.Error(err)
+		}
 	}
 }
 
-func TestAllFuncs2_v6(t *testing.T) {
+func TestAllFuncs_v6(t *testing.T) {
 	for _, f := range AllFuncs(IPv6) {
-		check(t, f)
-	}
-}
+		if _, err := f(); err != nil && err != errNotV6Address {
+			if e := err.Error(); strings.HasPrefix(e, "status code") ||
+				strings.Contains(e, "Client.Timeout exceeded") {
+				continue
+			}
+			t.Error(err)
+		}
 
-func check(t *testing.T, fn IPFn) {
-	ip, err := fn()
-	//fmt.Printf("%q\n", ip)
-	if err != nil {
-		t.Error(err)
-	}
-	if !IsValid(ip) {
-		t.Fail()
 	}
 }

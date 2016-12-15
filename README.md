@@ -1,7 +1,7 @@
 # pubip
 go library to receive the public IPv4 or IPv6 IP address
 
-Version: 0.2  
+Version: 0.2.1  
 Installation: `go get github.com/thibran/pubip`
 
 ```go

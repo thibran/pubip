@@ -1,6 +1,7 @@
 package pubip
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -45,8 +46,9 @@ var services = []service{
 }
 
 const (
-	contentType   = "Content-Type"
-	typeTextPlain = "text/plain"
+	contentType    = "Content-Type"
+	typeTextPlain  = "text/plain"
+	errWrongStatus = "status code %d from %q"
 )
 
 type service struct {
@@ -56,13 +58,21 @@ type service struct {
 
 func (ser service) ipv6func() IPFn {
 	return func() (string, error) {
-		return get(ser.v6)
+		ip, err := get(ser.v6)
+		if err == nil && !IsIPv6(ip) {
+			return "", errNotV6Address
+		}
+		return ip, err
 	}
 }
 
 func (ser service) ipv4func() IPFn {
 	return func() (string, error) {
-		return get(ser.v4)
+		ip, err := get(ser.v4)
+		if err == nil && !IsIPv4(ip) {
+			return "", errNotV4Address
+		}
+		return ip, err
 	}
 }
 
@@ -72,11 +82,11 @@ func AllFuncs(t IPType) IPFuncs {
 	var a IPFuncs
 	for _, ser := range services {
 		switch {
-		case (t == IPv6orIPv4 || t == IPv6) && len(ser.v6) > 0:
-			a = append(a, ser.ipv6func())
-			continue
 		case (t == IPv6orIPv4 || t == IPv4) && len(ser.v4) > 0:
 			a = append(a, ser.ipv4func())
+			continue
+		case (t == IPv6orIPv4 || t == IPv6) && len(ser.v6) > 0:
+			a = append(a, ser.ipv6func())
 			continue
 		}
 	}
@@ -89,6 +99,7 @@ func AllFuncs(t IPType) IPFuncs {
 
 // get returns the body of the response with a request timeout of 1 second.
 func get(u url) (string, error) {
+	// setup request params
 	req, err := http.NewRequest("GET", string(u), nil)
 	if err != nil {
 		return "", err
@@ -97,11 +108,17 @@ func get(u url) (string, error) {
 	client := http.Client{
 		Timeout: time.Duration(2 * time.Second),
 	}
+	// query server
 	r, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer r.Body.Close()
+	// check status-code
+	if r.StatusCode != http.StatusOK {
+		return "", fmt.Errorf(errWrongStatus, r.StatusCode, u)
+	}
+	// read result
 	lr := io.LimitReader(r.Body, 64) // read max 64 bytes from server
 	body, err := ioutil.ReadAll(lr)
 	if err != nil {

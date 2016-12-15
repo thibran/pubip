@@ -2,9 +2,15 @@ package pubip
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+)
+
+var (
+	errNotV6Address = errors.New("not a IPv6 address")
+	errNotV4Address = errors.New("not a IPv4 address")
 )
 
 // IsValid returns false if the ip address format is faulty.

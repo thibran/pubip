@@ -99,7 +99,7 @@ func (m *Master) addressParallel(a IPFuncs) (string, error) {
 			defer wg.Done()
 			// worker
 			for fn := range inpc {
-				if ip, ok := runIPFn(fn); ok {
+				if ip, err := fn(); err == nil {
 					resc <- ip
 					break
 				}
@@ -123,12 +123,4 @@ func (m *Master) addressParallel(a IPFuncs) (string, error) {
 		return ip, nil
 	}
 	return "", ErrIPUnknown
-}
-
-func runIPFn(fn IPFn) (string, bool) {
-	ip, err := fn()
-	if err != nil || !IsValid(ip) {
-		return "", false
-	}
-	return ip, true
 }
